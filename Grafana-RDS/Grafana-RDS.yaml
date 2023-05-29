@@ -1,0 +1,3 @@
+#The integration of the new RDS environments with Grafana cloud
+#Create dashbaords for the RDS instances in Grafana
+#Create alerting mechanisms for all the resources.
