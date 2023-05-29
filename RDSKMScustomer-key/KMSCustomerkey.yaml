@@ -1,0 +1,5 @@
+#Deploy a cloudformation template for a KMS customer key for RDS instances in 6 AWS environments.
+#Let the customer key to be multi region.
+#Ensure there is consistent naming convention for the key in all environments.
+#Deploy a terraform template for it.
+#These need to be picked up by the terraform template for RDS later.
