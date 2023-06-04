@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Template EC2 Key Pairs for EC2 instances into multiple AWS environments'
+Parameters:
+      environment:
+        Description: Environment of the EC2 Key pairs
+        Type: String
+        AllowedValues:
+            - sandbox
+            - qa
+            - uat
+            - prod
+Resources:
+  ImportedKeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName:
+      PublicKeyMaterial:
