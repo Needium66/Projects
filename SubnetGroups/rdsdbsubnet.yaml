@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Template creates RDS db subnet group into multiple environments'
+Parameters:
+      environment:
+        Description: Environment of the RDS db subnet group
+        Type: String
+        AllowedValues:
+            - sandbox
+            - qa
+            - uat
+            - prod
+      subnetid:
+        Description: The RDS subnet id
+        Type: String
+        AllowedValues:
+            - dbsubnetid
+      application:
+        Description: The application using the db subnet group
+        Type: String
+        AllowedValues:
+            - jide
+      purpose:
+        Description: The purpose of this service
+        Type: String
+        AllowedValues:
+            - subnetgroup
+
+Resources: 
+  RDSDBSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup" 
+    Properties: 
+      DBSubnetGroupDescription: The subnet group of RDS
+      SubnetIds: !Join [ "-", [ rds, !Ref "environment", !Ref "AWS::Region", !Ref "subnetid"] ]
+      Tags: 
+        - 
+          Key: environment
+          Value: !Ref environment
+          Key: application
+          Value: !Ref application
+          Key: purpose
+          Value: !Ref purpose
+
