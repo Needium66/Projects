@@ -3,3 +3,84 @@
 #Ensure there is consistent naming convention for the key in all environments.
 #Deploy a terraform template for it.
 #These need to be picked up by the terraform template for RDS later.
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Template creates KMS Customer managed key for SQL RDS'
+Parameters:
+      environment:
+        Description: Environment of the KMS customer key
+        Type: String
+        AllowedValues:
+            - sandbox
+            - qa
+            - uat
+            - prod
+      id:
+        Description: The KMS id
+        Type: String
+        AllowedValues:
+            - rdskms
+      kmskey:
+        Description: The KMS key identifier
+        Type: String
+        AllowedValues:
+            - key
+
+Resources:
+  myPrimaryKey: # This can be any name you give to it
+    Type: 'AWS::KMS::Key'
+    Properties:
+    Description: RDS multiregion KMS customer managed key
+    MultiRegion: true # this is optional
+    EnableKeyRotation: true # this is optional too
+    PendingWindowInDays: 10 # not allowed for this deployment; scheduling a day to delete the key after creation
+    KeyPolicy:
+      Version: 2012-10-17
+      Id: Ref Id
+      Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS: !Join
+              - ''
+              - - 'arn:aws:iam::'
+                - !Ref 'AWS::AccountId'
+                - ':root'
+          Action: 'kms:*'
+          Resource: "*"
+        - Sid: Allow use of the key
+          Effect: Allow
+          Principal:
+            AWS: !Join
+              - ''
+              - - 'arn:aws:iam'
+                - !Ref 'AWS::AccountId'
+                - ':role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS'
+          Action:
+            - kms:DescribeKey
+            - kms:Encrypt
+            - kms:Decrypt
+            - kms:ReEncrypt*
+            - kms:GenerateDataKey*
+          Resource: "*"
+        - Sid: Allow attachment of persistent resources
+          Effect: Allow
+          Principal:
+            AWS: !Join
+              - ''
+              - - 'arn:aws:iam::'
+                - !Ref 'AWS::AccountId'
+                - ':role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS'
+          Action:
+            - kms:CreateGrant
+            - kms:ListGrants
+            - kms:RevokeGrant
+          Resource: "*"
+          Condition:
+            Bool:
+              kms:GrantIsForAWSResource: 'true'
+  PrimaryKeyEncryptionKeyAlias:
+    Type: 'AWS::KMS::Alias'
+    Properties:
+    AliasName: !Join [ "", [ alias/, !Ref "environment", !Ref "AWS::Region", !Ref "kmskey"] ]
+    TargetKeyId: !Ref primarykeyencryptionkey
