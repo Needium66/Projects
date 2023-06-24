@@ -1,0 +1,156 @@
+#This project is on replication of jobs from AWS infra to clients. Replication of backup jobs
+#for example from our database through DMS to a client's database. It involves connection strings
+# to be able to facilitate this.
+
+#Objectives
+1. Enable the replication of data from DMS to client
+2. Validate the ongoing replication of data from DMS to the client
+3. How to create a replication instance
+4. How to create an endpoint
+5. How to create a database migration
+6. How to upgraade a replication instance
+
+#Step 1
+Enable the replication of data from DMS to your client
+#To carry out ongoing replication from DMS to a target externally involves the creation of a task after the
+#completion of initial (full load) migration to a supported target data store. It is used for ongoing replication
+#change data capture(cdc) changes from a source data. These steps are involved:
+1. There will be a full load of data at the source first
+2. There will be application of cached data
+3. There will be ongoing replication of data that has been cached to the target.
+#Once it is confirmed that there is full load of data at the source, you can select a specified migration task and
+#follow the below steps:
+1. Go to AWS account and select DMS from the services.
+2. Click on "Database migration tasks" under the "Migrate data" from menu on the left pane of the DMS main page
+3. Select a specified migration task from "Database migration task" e.g a name for it
+4. Go to "Actions" dropdown tab and select "Modify"
+5. Go to the "Task settings" column and change the CDC start time in UTC to where you prefer the ongoing replication to start from in UTC +5
+6. Click on "Save" button at the bottom
+7. Go back to the "Actions" drop down and select "Restart/Resume"
+8. Select a "Restart" from the pop-up page
+9. Click on "Start task" button.
+10. Check the status for the ongoing replication
+#Step 2
+Validate the ongoing replication of data from DMS to the client. To check for the ongoing replication, you can check for these steps:
+1. Click on the specified task and click on the "View logs " tab at the top right-hand side of the page. If you don't see any logs for
+5 minutes, proceed to the next step.
+2. Go back to the task and click on the "Table Statistics" tab on your replication task. During full load, you will see an increase
+in full load values. You should see changes in the "load state" values once you refresh it. During ongoing replication or cdc, you will
+see an increase in the dmls, insert, update and delete in the columns. However, if you don't see any changes, you can check if there is
+any latency on the task. Proceed to the next step:
+3. Select the "CloudWatch metrics" tab. To monitor for "full load", select it from the search drop down.
+4. Check the full load throughput rows source- it shows the rate at which dms can unload source data into the replication
+5. Check for the full load throughput rows target too.
+6. You can repeat steps 3 -5 for "cdc" too.
+
+#Step 3
+How to create replication instance
+1. Go to "Replication instances" in the navigation pane on the left
+2. Click on "Create replication instance" button at the top
+3. Enter a meaningful "Name" for your replication instance
+4. You can skip the ARN and Description parts
+5. Select "Instance class" e.g dms.c5.large
+6. Select "3.4.7" as the "Engine version" or current engine version
+7. Select "High Availability" if you want too.
+8. You can select 50GB as the "Allocated storage" if you want
+9. Under "Connectivity and security", select "IPv4" under "Network type"
+10. Select the appropriate "VPC" created for your database- private not default
+11. Select the appropriate "Replication subnet group"
+12. Check the "publicly accessible"
+13. Click on the "Advanced settings"
+14. Select the "Availability zone"
+15. Select the "VPC security groups"
+16. If you have the "AWS KMS key", select the available one
+17. Click on "Create replication instance"
+
+#Step 4: How to create an endpoint:
+1. Click on the "Endpoints" in the navigation pane at the left side of the DMS main page.
+2. Click on "Create endpoint" button at the top right-hand corner of the main page
+3. Select "Source endpoint" under the "Endpoint type"
+4. Check the box for "Select RDS DB instance"
+5. Select a preferred under "RDS instance"
+6. Enter the "Endpoint identifier": e.g a created endpoint under the "Endpoint configuration"
+7. Enter a "Descriptive Amazon Resource Name" if there is one
+8. Select "Microsoft SQL Server" as the "Source engine"
+9. Enter the configurations for "Endpoint settings" if there is. Note: I don't do this
+10. Enter the configurations for "KMS key" if there is
+11. Enter the values for "Tags"
+12. Test endpoint connection if there are
+13. Click on "Create endpoint"
+14. Repeat steps 1 - 13 to create the "Target endpoint"
+
+#Step 5: How to create a database migration task:
+1. Go to the AWS account
+2. Select "DMS" from the services that appear on the console
+3. Select "Database migration tasks" from the navigation pane on the left
+4. Under the "Task Configuration":
+5. Enter the name for "Task identifier" e.g a meaningful name
+6. Enter a "Descriptive ARN" if you have one
+7. Select a "Source database endpoint"
+8. Select a "Target database endpoint"
+9. Select a "Migration type" Replication data changes only
+10. Select "Wizard" as the "Editing mode"
+11. Select "Disable custom CDC start mode" under "CDC start mode for source transactions"
+12. Select "Do nothing" under "Target table preparation mode"
+13. Select "Full LOB mode" under "LOB column settings"
+14. Select "64" for "Maximum LOB size"
+15. Don't check the box for "Validation"
+16. Turn on the check for "Turn on CloudWatch logs" under "Task logs" and follow the steps below:
+Select all of these parameters as deafults- Source Unload, Target Load, Task Manager, Source Capture, Target apply.
+17. Check the box on the "Turn on batch-optimized apply"
+18. Go to "Advanced task settings and follow the steps below"
+19. Select "5" as "History timeslot in minutes"
+20. Select "...." as "Create control table in target using schema"
+21. Enable "Replication status", "Suspended tables", "Replication history", and disable "Apply exceptions"
+22. Select "4" as the "Maximum number of tables to load in parallel" under "Full load tuning settings"
+23. Select "600" under "Transaction consistency timeout in seconds"
+24. Select "10000" as the "Commit rate during full load"
+25. Go and get the schema for "Table mappings" and use JSON job for it
+26. Leave others as default
+27.You can start it
+28. Add tags
+29. Click on "Create task"
+
+#How to upgrade the replication instance
+1. Select "Replication instances" from the navigation pane on the left
+2. Select a specified replication instance 
+3. Click on the "Actions" dropdown tab at the top and select "Modify"
+4. Go to "Engine version" and click on the drop down to select the appropriate engine version 3.4.7
+5. Click on "Save" button
+
+#In other to use DNS Listener for your server name
+1. Create a rule forwards request for a domain in an AWS account
+2. Share the rule with another AWS account
+4. Associate the shared rule with the appropriate vpc
+Create an outbound resolver with a cloudformation template with a shared rule. This is for if you have an existing resolver endpoint
+
+"jidelocalRule": {
+  "Type" : "AWS::Route53Resolver::ResolverRule",
+  "Properties" : {
+    "DomainName" : "jide.example.com",
+    "Name" : "jidelocalRule",
+    "ResolverEndpointId" : {Ref "OutboundResolver},
+    "RuleType" : "FORWARD",
+    "TargetIps" : [
+      {
+        "Ip" : "192.0.2.6",
+        "Port" : "53"
+      },
+      {
+        "Ip" : "192.0.2.99,
+        "Port" : "53"
+      }
+    ]
+  }
+},
+"RuleSharejideexamplecom": {
+  "Type" : "AWS::RAM::ResourceShare",
+  "Properties" : {
+      "AllowExternalPrincipals" : "false",
+      "Name" : DNSVPCJideResolver,
+      "Principals" : [ account resource name ... ],
+      "ResourceArns" : [
+        { "Fn::GetAtt": ["jideexamplecomlocalRule", " Arn" ] }
+      ]
+    }
+}
