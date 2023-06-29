@@ -1,0 +1,29 @@
+#Need to install WinSCP on Program Files (x86)\WinSCP
+F: drive, size: 1TB
+
+#We can either install WinSCP manually or through PDQ
+#I prefer to install it through PDQ
+#We have a self-hosted PDQ instance
+I sign into it
+Open up PDQ Deploy
+Open up PDQ inventory
+If ever you cannot access either because there are 3 users connected to it already, go through Task Manager to sign a user out
+Search for "Task Manager" from the folder search at the bottom of your server
+Click on "Users" tab at the top of the Task Manager main page
+Select a specified user
+Click on "Sign out" button at the bottom
+Then Sign in again to PDQ Deploy or PDQ Inventory.
+Go to "Packages"
+Search for WinSCP software
+Right click on it
+Select "Deploy Once"
+Select "Choose Targets"
+Expand "PDQ inventory"
+Select "Computers"
+Click on "All computers" under "Collections" column
+Enter a machine to be deployed in the "Filter" search box and select the machine
+Click on "Add" >
+Click on "OK"
+CLICK on the box for "Use PDQ inventory scan user credentials first, when available"
+Click on "Deploy Now"
+Check the table under it to validate if the package is successfully deployed.
