@@ -27,3 +27,30 @@ Click on "OK"
 CLICK on the box for "Use PDQ inventory scan user credentials first, when available"
 Click on "Deploy Now"
 Check the table under it to validate if the package is successfully deployed.
+
+#Add F-drive to a sql server
+Go to "AWS"
+Search for instances
+Look for "Volumes" from the navigation pane on the left
+Select Volumes
+Click on "Create volume" button at the top
+Select "Volume type" e.g General Purpose SSD (gp3)
+Select "Size" e.g 120GB
+Leave the IOPS as default-3000IOPS
+Leave the "Throughput" as default e.g 125MiB
+Select the approrpiate "Availability Zone" (it must be same as the instance that you want to attach it to)
+Leave the "Snapshot ID" as default "Don't create volume from snapshot" since you want it newly created.
+Leave the "KMS key" as default -"aws/ebs"
+Click on "Create Volume" button at the bottom
+Click on "Tags" to add Name and others for your volume
+
+#Attach volume
+Wait for it to be available
+Select it
+Click on "Actions" dropdown tab at the top
+Select "Modify volume"
+Select the preferred instance you want to attach the volume too.
+It will automatically give a device name
+Click on "Attach" button at the bottom
+
+#Cloudformation template deployment
