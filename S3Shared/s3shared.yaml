@@ -1,0 +1,73 @@
+#Create s3 buckets and replication policies
+#Create cross account shared s3 bucket in a specified AWS account
+#Create an s3 bucket in an AWS account in each region that is used
+#Create a file in each region that contains Grafana Cloud data
+#Subsitute the password in the file to the one stored in secret
+#Ensure there is authorization on the buckets to allow all your AWS accounts to be able to access the bucket files.
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cross account shared S3 Bucket in JideOps for each active region
+Parameters:
+  NamePrefix:
+    Description: 'Name of the bucket- prefix'
+    Type: String
+    Deafult: 'needium-jideops-monitoring'
+
+Resources:
+  Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Join [ "-", [ !Ref "NamePrefix", !Ref "AWS::Region" ] ]
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref "NamePrefix", !Ref "AWS::Region" ] ]
+        - Key: environment
+          Value: Operations
+
+  BucketBackupPolicy:
+    Type: 'AWS::IAM::BucketPolicy'
+    Properties:
+      Bucket: !Join [ "-", [ !Ref "NamePrefix", !Ref "AWS::Region" ] ]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              - 's3:GetObjectTagging'
+            Effect: Allow
+            Resource:
+              - !Sub
+                  - arn:aws:s3:::${NamePrefixParameter}-${AWS::Region}/*
+                  - NamePrefixParameter: !Ref NamePrefix
+              - !Sub
+                  - arn:aws:s3:::${NamePrefixParameter}-${AWS::Region}
+                  - NamePrefixParameter: !Ref NamePrefix
+            Principal:
+              AWS:
+                - 'arn:aws:iam::${AWS::AccountId}:root' #operations
+                - 'arn:aws:iam::${AWS::AccountId}:root' #qa
+                - 'arn:aws:iam::${AWS::AccountId}:root' #uat
+                - 'arn:aws:iam::${AWS::AccountId}:root' #sandbox
+                - 'arn:aws:iam::${AWS::AccountId}:root' #prod
+                
+
+
+
+          
+
+    
+
