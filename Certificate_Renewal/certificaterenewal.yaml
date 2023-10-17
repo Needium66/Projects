@@ -1,0 +1,39 @@
+Requirements:
+#Digicert as intermediate provider
+#wsl
+#password storage e.g secret manager or whatever you are using.
+#database for storing reminders
+# always do the renewal 30 days out.
+Steps
+1. Create a passkey/password/passphrase in your password storage and copy the passphrase
+2. Run a script "./Create-CSR.sh" using a WSL terminal (This is a script stored locally on machine to execute this)
+3. Go the path where the script is stored locally
+4. Press Shift + right click in the folder where the script is stored and slect "open in linux shell"
+5. Once the path is opened into wsl terminal, run the command in step 2 (./Create-CSR.sh)
+6. Give a name to the cert to be created on the wsl terminal
+7. Provide the passkey from step 1
+8. Country: US or whatever country you are in.
+9. State: Your state
+10. Locality Name: The city
+11. Organization Name: Name of your organization
+12. Common Name: Name of given to your cert
+13. Email address: Your email address
+14. A challenge password: passkey from step 1
+15. An optional company name: You can hit enter or provide whatever you like
+16. Go to digicert and request a new cert
+17. Follow the necessary steps
+18. Download PDF at top left
+19. Download and email
+20. Create the cert files by downloading it from the email sent to you and save it locally
+21. Extract the zipped file, by right clicking and select "Extract All" into a preferred location
+22. You need only the first 2 top files from the extracted file.
+23. Go to where you save your files or password and create files where you will save the encrypted contents of the file
+24. one for crt
+25. One for DigiCertCA.crt
+26. On for key
+27. One for root that you will have to download from digicert directly- digicert/order certs/qucik view/ edit
+Note: dont create password while storing any of the encrypted password.
+The key that is stored is encrypted. So in order to decrypt the key so that another user may be able to use it. Run the below command on the 
+cert key file
+openssl rsa -in $nameofcertfile_key -out $nameofcertfile_key
+Enter the passphrase for the key
