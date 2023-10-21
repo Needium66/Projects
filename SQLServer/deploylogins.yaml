@@ -1,0 +1,36 @@
+parameters:
+  - name: terraformstoragename
+    type: string
+  - name: awscredentials
+    type: string
+  - name: region
+    type: string
+  - name: purpose
+    type: string
+  - name: sqllogins
+    type: object
+    default: null
+  - name: windowslogin
+    type: object
+    default: null
+  - name: postscripts
+    type: object
+    default: null
+  - name: instancelist
+    displayname: List of instance variables
+    type: object
+    default:
+      - instancea
+      - instanceb
+
+jobs:
+  - job: "DeployLogins${{ replace(parameters.purpose,'-','_') }}"
+    steps:
+      - task: DownloadPipelineStorage@2
+        inputs:
+          source: current
+          allowpartiallysucceededbuilds: true
+          artifact: ${{parameters.terraformstoragename}}
+          targetpath: '$(Pipeline.Workspace)'
+      - task: PowerShell@2
+        name: 
