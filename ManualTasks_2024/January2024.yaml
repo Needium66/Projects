@@ -1,0 +1,33 @@
+#01/02/2024
+#Create a new data drive for an sql server
+#Disable or pause a RDS disk space alert
+#Manage Update troubleshooting in Elastic Beanstalk
+
+#Create a new data drive for an sql server
+A user was trying to access a server through fleet manager remotely. He encountered an error- remote desktop connection timed out"
+AWS: If an error like this occurs, AWS documentation recommended you check the SSM agent version (it might be an earlier version)on the particular node. However, after
+I was able to access this, it was established that the SSM agent is current.
+Some further troubleshooting was done and it was found out that an SSIS package had already failed with an error that transaction log of
+a database was full and causing problems. This was because there was no drive space anymore. The user dropped one of the databases and
+was able to remotely access the server.
+In order to have a permanent soultion, a new drive was requested to be created.
+#Steps to creating a new drive
+1. Go to the appropriate instance to check the attached drives
+#After checking the drives, i noticed that there were other drives attached besides the c:drive. So i went to check the server
+2. Log in to the server
+3. Enter "Create" in the file browser
+4. Validate that all the respective discs are online and allocated
+#Unfortunately, there were existing disks that were online but not allocated. They were attached to the instance in aws, but not created on the server
+5. Create the disks ( you need to know the label for the drives and whatever you want to call)
+6. Right click inside appropriate drive section
+7. Select "New Simple Volume"
+8. Follow the prompts to click couple of "OKs" and give the drive a name
+9. Click on "Finish" button once done.
+10. Your drive should be ready to be used.
+
+#Back to step 1 if a new drive needs to be created
+1. Select "Create Volume"
+
+#Attach the drive to the instance
+
+#Mount the drive on the instance
