@@ -1,0 +1,6 @@
+# Need to upgrade the dms in one of our account to current version. There are some tasks that are required for this:
+#Create a forward rule request for the replication instance
+#Create a subnet group ( the current subnet group is default- having both public and private)
+#Create a new replication istance
+#Create new endpoints
+#Cutover.
