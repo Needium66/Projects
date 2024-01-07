@@ -31,3 +31,61 @@ In order to have a permanent soultion, a new drive was requested to be created.
 #Attach the drive to the instance
 
 #Mount the drive on the instance
+
+
+
+#Disable or pause a disk space RDS alert
+1. Select the appropriate alert in Grafana
+2. Click on "Edit" icon at the far right.
+3. Scroll down to enable "Pause" of the evaluation of the alert
+4. Select " Save rule and exit" tab at the top
+5. Validate that the alert rule is showing "paiused" on it.
+
+#Manage update'
+#The update of application version on our elastic beanstalk environment is failing- from version 2.13.0 to 2.13.1
+#There is always a maintenance window where this is automatically selected to be done. But it kept on failing and rolling back.
+#Which means the our application in that environment is running on a previous version. Although it is risky, it is not stopping the application
+#from running. So we had figure out a way for that.
+#I manually applied the update, it still persisted
+1. Select the "Manage Update" section on the appropriate environment
+2. Select "Apply update"
+3. Select "Apply immediately"
+#So i contacted AWS support once that failed. AWS requested for the logs of the instance that was launched during the update
+#The process is when you select the manage update manually, during the udate, the auto scaling group will increase the number of instances
+#to the specified max number, the instance that was launched during this period is supposed to persist after the update was successfully executed.
+#But because the update was failing, the launched instance became unavailable after an hour. So, I needed to get the logs of that particular
+#instance within the specified time- 1 hour before it becomes unavailable- so access it within the specified period and get the logs
+#Seamless way- detach the launched instance from the auto scaling group, it will persist after the update failure
+1. Apply the "Manage Update"
+2. Watch out for the instance that is launched and notate it
+3. Allow it some time to be fully running and for it to be attched to auto scaling group - like 25 minutes
+4. Detach it from the auto scaling group
+  i. Go the "EC2" instance
+  ii. Select "AutoScaling Group" from the navigation pane on the left
+  iii. Filter for the newest autoscaling group
+  iv. Select the appropriate newly launched instance
+  v. Select the "Actions" tab at the top right
+  vi. Select "detach"
+  vii. Validate that it is completely detached
+  viii. Go and access the instance to get the logs from different directory- HealthD, cfn, inet etc and send it through the powershell
+  command provided.
+
+#01/04/2024
+#Tracing error logs in dms
+A client accidentally deleted a database. They figured it out and took a point in time backup to restore it and synched it with us.
+They wanted us to do the same thing, so that we will be on the same page with data replication and all other stuff- up to date.
+1. I checked the migration task for the particular client to validate that it is ongoing and there is no problem- It was
+2. I checked the source database and saw that there was no failure or errors- all databases were synchronized
+3. I accessed the client database to validate that data is updated and being transferred
+#Investigated further
+1. Filtered for the log backups and validated that tables were inserted and there was no error log
+2. Clicked on the log back to go and filter further
+3. Filtered for E:, I:, SOURCE:, TARGET;,. There was no error in the logs
+4. I went back to the target database and searched for th last logs or data being repllicated and cross-checked that with the time they
+had the incident (6.00AMCST). I saw that data were shown to be updated at some intervals till 8.40AM. Decided to wait for more time to be sure
+Once I saw that data was updated at 9.15. I relayed my message to support to relay to the client. Everything is good on our side.
+
+#Stopped a RTDT for a client for a refresh
+Go into the dms
+Select the migration task for the client
+Stop the ongoing replication
