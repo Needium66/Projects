@@ -1,0 +1,49 @@
+#This documents the strategy carried out to implement the migration of applications from Azure to AWS
+#The list components to be migrated
+#- Web apps - about 4 - 6 for prod, 4 to 6 for DR, 4 for uat, 2 for qa (Call it T for example)
+#- A stand alone app for a particular product - about 2 - 4 instances (Call it D for example)
+#- Another standalone app for a particular product 6 instances (Call it R for example)
+#- Logic apps/workflows
+#- Asynchronous processes
+#- Ancilliary apps
+#- Configurations/ Secrets
+
+#Database/ Data
+# SSAS (SQL Server Analysis Services) for analytical processing (OLAP) and analytics engine for data mining. Used to streamline large volumes
+#of data into more easily analyzed parts
+# SSRS - It enables the creation of graphical, mobile and printed reports using SQL Server and other data sources
+# Databases
+# Jobs- [SSIS (SQL Server Integration Services)- built to be fast and flexible data warehousing too used to perform high-performance data integrations
+# ADF (Azure Data Factory)- fully managed, serverless data integration solution for ingesting, preparing
+#and transforming all data at scale
+
+#DR
+#Monitoring tools
+#Pipelines
+#Application Gateway
+#VPCs
+#WAF
+#Load Balancers
+#API Gateway
+#Networking
+#Runbooks (copy of database, load test)
+
+#RoadMap
+- Carry out a successful DR test to another region for the product line (ensure it covers everything)
+- Implement the migration of the monitoring tools, ensuring metrics for SLAs and others
+  - Uptime
+  - System Login
+  - Memory
+  - CPU
+  - Disk usage
+  - Others
+- Build Pipeline
+- Networking architecture implementation
+- DR pipeline
+- Delivery Pipleline
+- API Gateway (Can be done through Elastic Beanstalk)
+- VPCs (Conection to databases required)
+- Load Balancers (Elastic Beanstalk)
+- Runbooks e.g for load test scalability, db copy
+- Utilities 
+

@@ -16,7 +16,8 @@ In order to have a permanent soultion, a new drive was requested to be created.
 #After checking the drives, i noticed that there were other drives attached besides the c:drive. So i went to check the server
 2. Log in to the server
 3. Enter "Create" in the file browser
-4. Validate that all the respective discs are online and allocated
+4. Validate that all the respective discs are online and all
+ocated
 #Unfortunately, there were existing disks that were online but not allocated. They were attached to the instance in aws, but not created on the server
 5. Create the disks ( you need to know the label for the drives and whatever you want to call)
 6. Right click inside appropriate drive section
@@ -89,3 +90,20 @@ Once I saw that data was updated at 9.15. I relayed my message to support to rel
 Go into the dms
 Select the migration task for the client
 Stop the ongoing replication
+
+
+
+#01/08/2024
+#Endpoint security patches
+#End user software installation
+#Give end user access to a tool through active directory
+#malop report for my organization
+
+
+#malop report for my organization
+I set up a malware alert in Cybereason for a malicious executable. We use Cybereason for our endpoint security.
+The tool scans our devices/endpoints/laptops and others daily for threat intelligence. Whenever it discovers a security breach it triggers
+an alert based on what it was set up for.
+#got a malop(malware operations) alert for executables e.g someone trying to install a grafana agent or using a powershell executable in their deployment
+#it automatically picks up this and notifies me. If the alert is first positive e.g validating from the user that is trying to execute the script,I will
+#Cybereason to go ahead and allow it. If it is really positive after investigation, the only solution is still completely block it.+
