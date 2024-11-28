@@ -559,11 +559,34 @@ resource "aws_db_instance" "needlinux_db_instance" {
   license_model = "license-included"
 }
 
-# nessus scanner
+#nessus scanner block
+module "nessus_scanner" {
+  source = "github.com/BuyerQuest/terraform-tenable-nessus-scanner-aws"
 
-#creates the instance to be used for tenable nessus for vulnerability management
-resource "aws_security_group" "needlinux_nessus_security_group" {
-  name        = "needlinux_tenable_security"
+  scanner_name        = "neediumlinux Nessus Scanner"
+  tenable_linking_key = "pvwk5qf5bwsuperfakekeypqv3zcovanqnuawebmv23rj9fofsdcul7aaa"
+  vpc_id              = aws_vpc.needlinux_vpc.id
+  count               = 1
+  subnet_id           = element(aws_subnet.needlinux_private_subnet[*].id, count.index)
+  instance_type       = var.needlinux_instance_type
+  instance_name       = "needlinux-nessus-scanner"
+
+  instance_tags = {
+    name    = "security-scanner"
+    purpose = "tenable"
+  }
+
+  extra_filters = [
+    {
+      name   = "image-id"
+      values = ["ami-0e2e293e46c009d6f"] # Use a specific AMI instead of the latest available image
+    }
+  ]
+}
+
+# creates the nessus security groups
+resource "aws_security_group" "needlinux-nessus-security-group" {
+  name        = "needlinux-tenable-security"
   description = "security group for the Nessus VM Scanner Server instance (Deny all inbound)"
   vpc_id      = aws_vpc.needlinux_vpc.id
 
@@ -576,18 +599,21 @@ resource "aws_security_group" "needlinux_nessus_security_group" {
   }
 }
 
-## outbound traffic ##
-resource "aws_security_group_rule" "neediumlinux_nessus_allow_outbound" {
+# the documentation for tenable on aws recommends a security group with
+# no entries in it, but mine had a problem without the egress rule.
+
+# outbound traffic
+resource "aws_security_group_rule" "needlinux-nessus-allow-outbound" {
   type        = "egress"
   from_port   = 0
   to_port     = 0
   protocol    = "-1"
   cidr_blocks = ["0.0.0.0/0"]
 
-  security_group_id = aws_security_group.needlinux_nessus_security_group.id
+  security_group_id = aws_security_group.needlinux-nessus-security-group.id
 }
 
-## nessus iam role ##
+# nessus iam role
 resource "aws_iam_role" "needlinux-nessus-server-role" {
   name               = "needlinux-nessus-role"
   assume_role_policy = data.aws_iam_policy_document.needlinux-nessus-instance-assume-role-policy.json
@@ -605,9 +631,7 @@ data "aws_iam_policy_document" "needlinux-nessus-instance-assume-role-policy" {
   }
 }
 
-## role policy/permissions ##
-
-# attaches ec2 read-only policy to the IAM role
+# attaches ec2 read-only policy to the iam role
 resource "aws_iam_role_policy_attachment" "needlinux-nessus-ec2-read-only" {
   role       = aws_iam_role.needlinux-nessus-server-role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
@@ -619,48 +643,49 @@ resource "aws_iam_instance_profile" "needlinux-nessus-server-profile" {
   role = aws_iam_role.needlinux-nessus-server-role.name
 }
 
+# finds the latest AMI by product code
+data "aws_ami" "nessus-image" {
+  most_recent = true
+  owners      = ["aws-marketplace"]
 
-resource "aws_instance" "nessus_instance" {
-  ami                         = "ami-09da212cf18033880"
-  instance_type               = "t3.micro"
-  vpc_security_group_ids      = [aws_security_group.needlinux_nessus_security_group.id]
-  key_name                    = "ninclinux"
-  count                       = 1
-  subnet_id                   = element(aws_subnet.needlinux_private_subnet[*].id, count.index)
-  associate_public_ip_address = true
-  iam_instance_profile        = aws_iam_instance_profile.needlinux-nessus-server-profile.name
+  filter {
+    name   = "product-code"
+    values = ["8fn69npzmbzcs4blc4583jd0y"]
+  }
+
+  dynamic "filter" {
+    for_each = var.extra_filters
+    content {
+      name   = filter.value.name
+      values = filter.value.values
+    }
+  }
+}
+
+# creates the instance for nessus
+resource "aws_instance" "needlinux-nessus-scanner" {
+  ami                    = data.aws_ami.nessus-image.id
+  vpc_security_group_ids = [aws_security_group.needlinux-nessus-security-group.id]
+  iam_instance_profile   = aws_iam_instance_profile.needlinux-nessus-server-profile.name
+  count                  = 1
+  subnet_id              = element(aws_subnet.needlinux_private_subnet[*].id, count.index)
+#  user_data              = jsonencode(local.user_data_map)
+  instance_type          = var.needlinux_instance_type
+
+    tags = local.instance_tags
 
   root_block_device {
-
-    volume_type           = "gp2"
-    volume_size           = 50
-    delete_on_termination = true
+    volume_type = "gp3"
+    volume_size = "50"
   }
+}
 
-  connection {
-    type        = "ssh"
-    user        = "ec2-user"
-    private_key = file("private_key/ninclinux.pem")
-    #    #    host        = aws_instance.nessus_instance
-    #    count = 1
-    host = element(aws_instance.nessus_instance[*].id, count.index)
-  }
+resource "aws_eip" "needlinux-nessus-scanner-eip" {
+  count    = var.use_eip ? 1 : 0
+  vpc      = true
+  instance = element(aws_instance.needlinux-nessus-scanner[*].id, count.index)
 
-  # updates filename as needed (need to add the file to the folder here)
-  provisioner "file" {
-    source      = "files/Nessus-8.2.3-es7.x86_64.rpm"
-    destination = "/tmp/Nessus-8.2.3-es7.x86_64.rpm"
-  }
-
-  # update filename as needed
-  provisioner "remote-exec" {
-    inline = ["sudo yum update -y",
-      "sudo rpm -ivh /tmp/Nessus-8.2.3-es7.x86_64.rpm",
-      "sudo /bin/systemctl start nessusd.service",
-    ]
-  }
-
-  tags = {
-    Name = "needlinux-scanner"
-  }
+    tags = {
+      Name = "nessus_eip"
+    }
 }
