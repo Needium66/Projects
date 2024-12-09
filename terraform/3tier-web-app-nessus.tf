@@ -662,30 +662,51 @@ data "aws_ami" "nessus-image" {
   }
 }
 
-# creates the instance for nessus
-resource "aws_instance" "needlinux-nessus-scanner" {
-  ami                    = data.aws_ami.nessus-image.id
-  vpc_security_group_ids = [aws_security_group.needlinux-nessus-security-group.id]
-  iam_instance_profile   = aws_iam_instance_profile.needlinux-nessus-server-profile.name
-  count                  = 1
-  subnet_id              = element(aws_subnet.needlinux_private_subnet[*].id, count.index)
-#  user_data              = jsonencode(local.user_data_map)
-  instance_type          = var.needlinux_instance_type
 
-    tags = local.instance_tags
+####################################################
+# AWS RDS Aurora MySQL
+####################################################
 
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = "50"
+#https://registry.terraform.io/modules/terraform-aws-modules/rds-aurora/aws/latest
+
+module "aurora" {
+  source = "terraform-aws-modules/rds-aurora/aws"
+  version = "7.2.2"
+
+  #name            = local.name
+  name            = ${local.name}-aurora-mysql
+  engine          = "aurora-mysql"
+  engine_version  = "serverless"
+  storage_encrypted = true
+  database_name     = "Need-database"
+  tags              = local.tags
+
+
+  #vpc_id               = module.vpc.vpc_id
+  vpc_id               = aws_vpc.needlinux_vpc.id
+  #db_subnet_group_name = module.vpc.database_subnet_group_name
+  db_subnet_group_name = aws_db_subnet_group.needlinux_database_subnet_group.name
+  create_security_group = true
+  allowed_cidr_blocks   =
+
+  monitoring_interval = 60
+  enable_http_endpoint = true
+  publicly accessible = true
+
+  apply_immediately   = true
+  skip_final_snapshot = true
+
+  db_parameter_group_name  = aws_db_parameter_group.serverless-mysql.
+  db_cluster_parameter_group_name  = aws_rds_cluster_parameter_group.serverless-mysql.id
+
+  scaling_configuration = {
+    auto_pause               = true
+    min_capacity             = 2
+    max_capacity             = 16
+    seconds_until_auto_pause = 1800
+    timeout_action           = "ForceApplyCapacityChange"
   }
 }
+  
 
-resource "aws_eip" "needlinux-nessus-scanner-eip" {
-  count    = var.use_eip ? 1 : 0
-  vpc      = true
-  instance = element(aws_instance.needlinux-nessus-scanner[*].id, count.index)
-
-    tags = {
-      Name = "nessus_eip"
-    }
-}
+################################
