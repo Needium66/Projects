@@ -1,0 +1,43 @@
+#################################################################################
+certificate utilities: some commands to work with when updating ssl certificates
+##################################################################################
+
+##################################################################################
+      i once ran into ubuntu version compatibility problems on my terminal
+      while working on updating/renewing certficates.the commands ssl cert
+      commands were not working with 22.04 and openssl 3.0.2 successfully.
+      after uninstalling ubuntu and installing with "wsl --install -d Ubunt
+      u" and that failed to work. i cleaned up all ubuntu packages and sta-
+      rt over.
+      unable to switch it to 24.04 as default in settings manaually. 
+#################################################################################
+run the below command to check the wsl distribution you are running:
+"wsl --list --all"
+run the below command to select preferred distro as default: Ubuntu-24.04
+"wsl --set-default Ubuntu-24.04"
+to update the ubuntu packages, including openssl:
+sudo apt-get update
+sudo apt-get upgrade
+to uninstall openssl:
+sudo apt-get remove openssl
+to check the version of openssl:
+openssl version
+to check the version of ubuntu and other related details:
+cat /etc/os-release
+to output the content of openssl configuration file to a text file: > might not work
+cp /etc/ssl/openssl.conf $filename.text
+
+#################################################################################################################
+some cert update commmands: you have got to run this in the directory where you have some cert files e.g key, etc
+#################################################################################################################
+run the below command to input your certificate name:
+"read -p "What is your PEM file namae without the extension (your cert name):"
+run the belwo command to input the password created for the password update:
+"Pass:$password"
+run the below command to create the ca file with its extension:
+"read -p "What is your CA file namae with the extension (your cert name):"
+run the belwo command to create the pfx file:
+"openssl pkcs12 -export -CAfile $CA -in $CERT.pem -name $CERT -passout pass:$PASS -out $CERT.pfx -legacy"
+
+
+
