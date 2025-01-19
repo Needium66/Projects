@@ -1,0 +1,113 @@
+#########################################################################
+#Ubuntu is one of the most important Linux distros from Debian and people
+#including me, love using it because of its open sourceness. I am curating
+#some commands I have used working with Ubuntu. This will be updated subse
+#-quently whenever i can.
+##########################################################################
+
+##################################################################################
+Commands for installing and configuring sssd tools to enable user management on AD
+You might want to be managing users on your ubuntu machines from existing group in
+AD. These outlined commands will come handy in that sense
+##################################################################################
+To install the required sssd packages, run the below command:
+sudo apt install sssd-ad sssd-tools realmd
+
+To validate if the domain you are adding your ubuntu machine is discoverable through DNS, run the below commands:
+sudo realm -v discover $domain
+
+To join your domain on the ubuntu machine, run the below:
+sudo realm join $domain --user=$username
+
+To validate if the domain you joined is successful or not, run the below command:
+sudo realm join -v $domain
+
+To check the sssd config file for the content and what might need to be added, run the below command:
+cat /etc/sssd/sssd.conf
+
+To create an automatic home directory for network user when login, run the below command:
+sudo pam-auth-update --enable mkhomedir
+
+To validate if you are a user on the ubuntu vm, run the below comand:
+getent passwd $username@$domain
+
+To validate if a user belongs to an AD group, run the below command:
+groups $username@$domain
+
+To access your vm through ssh remotely: e.g git bash etc, run the below command:
+ssh $username@$domain
+
+If you are unable to access your ubuntu vm remotely, run the below commands to update required files:
+To check if your id was created locally on the machine: id $username@$domain
+Edit the sssd.conf file  to enable whatever you or you dont want e.g add "fqdn" as False:
+sudo vi /etc/sssd/sssd.conf
+To change the value of "fallback_home" directory from default to: "home/%d/%u"
+Save the file and exit: Esc + :wq!
+
+To add users to the sudoers group, run the below command:
+echo '$sudoers-group-name           ALL=(ALL) NOPASSWD:ALL'  | sudo EDITOR='tee -a' visudo
+
+To validate that a user has been added successfully to a sudoers group, run the below command:
+sudo cat /etc/sudoers
+
+Run the below command to check the realm list for sssd:
+sudo realm list
+
+To add a group to the realm list, run the below command:
+sudo realm permit -g $group-name
+
+To restart the sssd:
+sudo systemctl restart sssd
+
+To set the timezone to America/Chicago:
+timedatectl set-timezone America/Chicago
+
+To set up ossec agent on your ubuntu, follow the below steps to first generate a key on the ossec server for ossec agent for ubuntu and import:
+Go to your ossec server, and run the below commands and enter some prompts:
+sudo /var/ossec/bin/manage_agents
+Enter "A" to add new agent for your ubuntu to the server
+Enter your preferred name for the agent e.g it can be the name of your ubuntu server
+Enter the IP address of your ubuntu server
+Confirm the addition of the agent
+Enter "E" to extract the key
+Enter the number of the agent ID
+Run the manage_agents command again: sudo /var/ossec/bin/manage_agents
+Enter "I" to import the key
+Run the below command to restart the agent server:
+sudo systemctl restart ossec && sudo systemctl status ossec
+Run the below command to restart ossec-control on the server:
+sudo /var/ossec/bin/ossec-control restart
+To validate that your newly added agent is active on the server, run the below command:
+sudo /var/ossec/bin/agent_control -I
+
+Run the belwo commands on the ubuntu machine to set up the agent:
+Download ossec agent for ubuntu: wget =q -0 - https://updates.atoicorp.com/installers/atomic | sudo bash
+To update the necessary package, run this command to update the apt data: sudo apt-get update
+To install the agent< run this command: sudo apt-get install ossec-hids-agent
+To check if the agent was installed successfully, run this command: sudo ls /var/ossec/bin/manage_agents
+To import the key you created on the ossec server, run this command and follow the prompt by selecting "I":
+sudo /var/ossec/bin/manage_agents
+To fix an unlink error incase you get one, restart ossec by run the below command:
+sudo systemctl restart ossec && sudo systemctl status ossec
+
+#You might need to be accessing your ubuntu vm remotely from AWS. If you want to do that, follow the below steps
+To install AWS ssm on your ubuntu, run the below commands:
+aws ssm create-activation `
+  --deafult-instance-name ManagedINstance `
+  --description "Activation for ManagedInstance" `
+  --iam-role SSMServiceRole `
+  --registration-limit 1 `
+  --profile $your-aws-account-name `
+  -- region $region
+
+Run the below command to install the ssm agent on ubuntu server:
+sudo snap install amazon-ssm-agent --classic
+sudo systemctl stop snap.amazon-ssm-agent.amazon-ssm-agent.service
+
+Run the below command to update the code, region and id from the aws ssm create-activation above:
+sudo /snap/amazon-ssm-agent/current/amazon-ssm-agent register -code "activation-code" -id "activation-id" -region $region
+
+Run the below command to start the ssm agent:
+sudo systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service
+
+
