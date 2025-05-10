@@ -7,12 +7,16 @@
 #Spinning the AD up with AWS service for AD (Directory Service)#
 #Steps involved includes:                                      #
 #- Deploy networking components                                #
+#- Create admin and users credentials,groups and organizational#
+#  units                                                       #
 #- Deploy the AD                                               #
-#- Create users, groups and organizational units               #
+#- Fetch the secrets for users and groups                      #
+#- Create the roles, permissions                               #
+#- Create SGs for the servers                                  #
 #- Deploy the Windows machine with appropriate userdata        #
 #- Deploy the Linux machine with appropriate userdata          #
 #- Deploy the SSSD authentication for Linux, to enable its     #
-#functionality with Windows                                    #
+#  functionality with Windows                                  #
 #- Validate the deployments                                    #
 ################################################################
 
@@ -106,8 +110,8 @@ resource "random_password" "admin_password" {
 }
 
 # Create an AWS Secrets Manager secret to store AD Admin credentials
-resource "aws_secretsmanager_secret" "admin_secret1" {
-  name        = "admin_ad_credentials1"
+resource "aws_secretsmanager_secret" "admin_secret" {
+  name        = "admin_ad_credentials"
   description = "AD Admin Credentials"
   
   lifecycle {
@@ -117,7 +121,7 @@ resource "aws_secretsmanager_secret" "admin_secret1" {
 
 # Store the admin credentials in AWS Secrets Manager with a versioned secret (don't really recommend this)
 resource "aws_secretsmanager_secret_version" "admin_secret_version" {
-  secret_id     = aws_secretsmanager_secret.admin_secret1.id
+  secret_id     = aws_secretsmanager_secret.admin_secret.id
   secret_string = jsonencode({
     username = "NINC\\Admin"  # AD username
     password = random_password.admin_password.result
@@ -339,14 +343,9 @@ resource "aws_vpc_dhcp_options_association" "needium_ad_dhcp_association" {
 #Fetch the secrets for users and groups
 ###########################################################
 
-# Define the AWS provider and set the region to us-east-2 (Ohio)
-# Modify this if your deployment requires a different AWS region
-#provider "aws" {
-  #region = "us-east-2"
-#}
-
 # Fetch AWS Secrets Manager secrets for different Active Directory users
 # These secrets store AD credentials for authentication purposes
+# Adds the depends_on to enable the resources be created before being fetched
 
 data "aws_secretsmanager_secret" "jomoni_secret" {
   name = "jomoni_ad_credentials" # Secret name in AWS Secrets Manager
@@ -358,9 +357,9 @@ data "aws_secretsmanager_secret" "aimran_secret" {
   depends_on = [aws_secretsmanager_secret.aimran_secret]
 }
 
-data "aws_secretsmanager_secret" "admin_secret1" {
+data "aws_secretsmanager_secret" "admin_secret" {
   name = "admin_ad_credentials" # Secret name for the admin user in AWS Secrets Manager
-  depends_on = [aws_secretsmanager_secret.admin_secret1]
+  depends_on = [aws_secretsmanager_secret.admin_secret]
 }
 
 data "aws_secretsmanager_secret" "llajide_secret" {
@@ -438,7 +437,7 @@ resource "aws_iam_policy" "secrets_policy" {
           "secretsmanager:ListSecrets"       # List all secrets in AWS Secrets Manager
         ]
         Resource = [
-          data.aws_secretsmanager_secret.admin_secret1.arn,
+          data.aws_secretsmanager_secret.admin_secret.arn,
           data.aws_secretsmanager_secret.aoladosu_secret.arn,
           data.aws_secretsmanager_secret.llajide_secret.arn,
           data.aws_secretsmanager_secret.aimran_secret.arn,
@@ -501,76 +500,6 @@ resource "aws_iam_instance_profile" "ec2_ssm_profile" {
   name = "EC2SSMProfile"
   role = aws_iam_role.ec2_ssm_role.name  # Associate the EC2SSMRole with this profile
 }
-
-##################################################################
-# Retrieve information about a specific AWS subnet using a tag-based filter
-# This subnet will be used for AD services deployment
-###########################################################################
-
-#data "aws_subnet" "neediumad-subnetuat1" {
-#  filter {
-    #name   = "tag:Name" # Match based on the 'Name' tag
-    #depends_on = [aws_subnet.neediumad-subnetuat1]
-    #values = ["neediumad-subnetuat1"] # Look for a subnet tagged as "ad-subnet-1"
-  #}
-#}
-
-# Retrieve information about another AWS subnet for redundancy or HA
-
-#data "aws_subnet" "neediumad-subnetuat2" {
-  #filter {
-    #name   = "tag:Name"
-    #depends_on = [aws_subnet.neediumad-subnetuat2]
-    #values = ["neediumad-subnetuat2"] # Look for a subnet tagged as "ad-subnet-2"
-  #}
-#}
-
-# Retrieve details of the AWS VPC where Active Directory components will be deployed
-# Uses a tag-based filter to locate the correct VPC
-
-#data "aws_vpc" "neediumad-vpc" {
-  #filter {
-    #name   = "tag:Name"
-    #depends_on = [aws_vpc.neediumad-vpc]
-    #values = ["neediumad-vpc"] # Look for a VPC tagged as "ad-vpc"
-  #}
-#}
-
-# Fetch the most recent Ubuntu AMI provided by Canonical
-# This ensures that the latest security patches and features are included
-
-#data "aws_ami" "ubuntu_ami" {
-  #most_recent = true                         # Get the latest available AMI
-  #owners      = ["058264335367"]             # Canonical's AWS Account ID for official Ubuntu images
-  #depends_on = [aws_instance.neediumlinux_ad_instance]
-
-  #filter {
-    #name   = "name"                          # Filter AMIs by name pattern
-    #values = ["*ubuntu-noble-24.04-amd64-*"] # Match Ubuntu 24.04 LTS AMI for x86_64 architecture
-  #}
-#}
-
-# Fetch the most recent Windows Server 2022 AMI provided by AWS
-# This ensures we deploy the latest Windows Server OS image
-
-#data "aws_ami" "windows_ami" {
-  #most_recent = true                     # Fetch the latest Windows Server AMI
-  #owners      = ["amazon"]               # AWS official account for Windows AMIs
-  #depends_on = [aws_instance.neediumwindows_ad_instance]
-
-  #filter {
-    #name   = "name"                                      # Filter AMIs by name pattern
-    #values = ["Windows_Server-2022-English-Full-Base-*"] # Match Windows Server 2022 AMI
-  #}
-#}
-
-# # Define an EC2 key pair to allow SSH access to instances
-# # The public key is read from an existing file
-
-# resource "aws_key_pair" "ec2_key_pair" {
-#   key_name   = "ec2-key-pair"           # Name of the key pair in AWS
-#   public_key = file("./key.pem.pub")    # Read the public key from a local file
-# }
 
 
 ##################################################
@@ -675,23 +604,16 @@ resource "aws_security_group" "neediumad_ssm_sg" {
 resource "aws_instance" "neediumwindows_ad_instance" {
   
   # AMAZON MACHINE IMAGE (AMI)
-  # Reference the Windows AMI ID fetched dynamically via the data source.
-  # This ensures the latest or specific Windows Server version is used.
-
-  #ami = data.aws_ami.windows_ami.id
-  #ami = aws_ami.windows_ami.id
-  ami           = "ami-06fbbb433da1a5bf7"
+  ami           = "ami-0c24d55d64443eb31"
 
   # INSTANCE TYPE
   # Defines the compute power of the EC2 instance.
   # "t2.medium" is selected to provide more RAM and CPU power, 
-  # since Windows requires more resources than Linux.
-  
+  # since Windows requires more resources than Linux. 
   instance_type = "t2.medium"
 
   # NETWORK CONFIGURATION - SUBNET
   # Specifies the AWS subnet where the instance will be deployed.
-  # The subnet is dynamically retrieved from a data source (neediumad-subnetuat2).
   # This determines whether the instance is public or private.
   
   subnet_id = aws_subnet.neediumad-subnetuat2.id
@@ -727,12 +649,12 @@ resource "aws_instance" "neediumwindows_ad_instance" {
   # USER DATA SCRIPT
   # Executes a PowerShell startup script (`userdata.ps1`) when the instance boots up.
   # This script is dynamically templated with values required for Windows Active Directory setup:
-  # - `admin_secret1`: The administrator credentials secret.
+  # - `admin_secret`: The administrator credentials secret.
   # - `domain_fqdn`: The fully qualified domain name (FQDN) for the environment.
   # - `computers_ou`: The Organizational Unit where computers are registered in Active Directory.
   
   user_data = templatefile("./NBUILDOUT/userdata.ps1", { 
-    admin_secret1 = "admin_ad_credentials1"                       # The administrator credentials secret.
+    admin_secret = "admin_ad_credentials"                       # The administrator credentials secret.
     domain_fqdn  = "uat.needium.com"                       # The domain FQDN for Active Directory integration.
     computers_ou = "OU=Computers,OU=NINC,DC=uat,DC=needium,DC=com" # The AD OU where computers will be placed.
   })
@@ -756,9 +678,6 @@ resource "aws_instance" "neediumwindows_ad_instance" {
 resource "aws_instance" "neediumlinux_ad_instance" {
   
   # AMAZON MACHINE IMAGE (AMI)
-  # Reference the Ubuntu AMI ID fetched dynamically via the data source.
-  
-  #ami = data.aws_ami.ubuntu_ami.id
   ami = "ami-04f167a56786e4b09"
 
   # INSTANCE TYPE
@@ -769,7 +688,6 @@ resource "aws_instance" "neediumlinux_ad_instance" {
 
   # NETWORK CONFIGURATION - SUBNET
   # Specifies the AWS subnet where the instance will be deployed.
-  # The subnet is dynamically retrieved from a data source (neediumad-subnetuat1).
   
   subnet_id = aws_subnet.neediumad-subnetuat1.id
 
@@ -788,12 +706,6 @@ resource "aws_instance" "neediumlinux_ad_instance" {
   
   associate_public_ip_address = true
 
-  # SSH KEY PAIR
-  # Assigns an SSH key pair for secure access.
-  # The key pair is expected to be created elsewhere in the Terraform configuration.
-  
-  # key_name = aws_key_pair.ec2_key_pair.key_name
-
   # IAM INSTANCE PROFILE
   # Assigns an IAM role with the necessary permissions for accessing AWS resources securely.
   # This is often used for granting access to S3, Secrets Manager, or other AWS services.
@@ -803,12 +715,12 @@ resource "aws_instance" "neediumlinux_ad_instance" {
   # USER DATA SCRIPT
   # Executes a startup script (`userdata.sh`) when the instance boots up.
   # This script is dynamically templated with values required for setup:
-  # - `admin_secret1`: The administrator credentials secret
+  # - `admin_secret`: The administrator credentials secret
   # - `domain_fqdn`: The fully qualified domain name (FQDN) for the environment.
   # - `computers_ou`: The Organizational Unit where computers are registered in Active Directory.
 
   user_data = templatefile("./NBUILDOUT/userdata.sh", { 
-    admin_secret1 = "admin_ad_credentials1"                       # The administrator credentials secret
+    admin_secret = "admin_ad_credentials"                       # The administrator credentials secret
     domain_fqdn  = "uat.needium.com"                       # The domain FQDN for Active Directory integration.
     computers_ou = "OU=Computers,OU=NINC,DC=uat,DC=needium,DC=com" # The AD OU where computers will be placed.
   })

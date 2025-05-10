@@ -51,8 +51,8 @@ rm -f -r awscliv2.zip aws
 # ---------------------------------------------------------------------------------
 
 # Retrieve the secret value (AD admin credentials) from AWS Secrets Manager.
-# - ${admin_secret1}: The name of the secret containing the AD admin credentials.
-secretValue=$(aws secretsmanager get-secret-value --secret-id ${admin_secret1} \
+# - ${admin_secret}: The name of the secret containing the AD admin credentials.
+secretValue=$(aws secretsmanager get-secret-value --secret-id ${admin_secret} \
     --query SecretString --output text)
 
 # Extract the admin password from the secret value using `jq`.

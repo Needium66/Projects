@@ -30,7 +30,7 @@ $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
 # ------------------------------------------------------------
 
 # Retrieve domain admin credentials from AWS Secrets Manager
-$secretValue = aws secretsmanager get-secret-value --secret-id ${admin_secret1} --query SecretString --output text
+$secretValue = aws secretsmanager get-secret-value --secret-id ${admin_secret} --query SecretString --output text
 $secretObject = $secretValue | ConvertFrom-Json
 $password = $secretObject.password | ConvertTo-SecureString -AsPlainText -Force
 $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $secretObject.username, $password
