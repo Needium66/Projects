@@ -83,7 +83,7 @@ resource "aws_route_table" "neediumtgw-rt-priv" {
 ##############################################################################################
 resource "aws_route" "neediumtgw_default_route" {
   route_table_id         = aws_route_table.neediumtgw-rt-pub.id # Reference the public route table
-  destination_cidr_block = "0.0.0.0/0"                      # Define the default route (all IPs allowed)
+  destination_cidr_block = "0.0.0.0/0"                          # Define the default route (all IPs allowed)
   gateway_id             = aws_internet_gateway.neediumtgw-igw.id
   # Use the Internet Gateway for outbound traffic
 }
@@ -92,9 +92,9 @@ resource "aws_route" "neediumtgw_default_route" {
 # Create the public subnet within the VPC
 #####################################################
 resource "aws_subnet" "neediumtgw-pub-sub" {
-  vpc_id                  = aws_vpc.neediumtgw-vpc.id
-  cidr_block              = "10.99.99.0/25" # assign a CIDR block (64 IPs)
-  map_public_ip_on_launch = true          # automatically assign public IPs to instances
+  vpc_id = aws_vpc.neediumtgw-vpc.id
+  cidr_block              = var.neediumtgw_pub_sub
+  map_public_ip_on_launch = true # automatically assign public IPs to instances
   availability_zone       = "us-east-2a"
 
   tags = {
@@ -106,9 +106,9 @@ resource "aws_subnet" "neediumtgw-pub-sub" {
 # Create the private subnet within the VPC
 ###########################################
 resource "aws_subnet" "neediumtgw-priv-sub" {
-  vpc_id                  = aws_vpc.neediumtgw-vpc.id
-  cidr_block              = "10.99.99.128/25" # assign a CIDR block (64 IPs, next available range)
-  map_public_ip_on_launch = true           # automatically assign public IPs to instances
+  vpc_id = aws_vpc.neediumtgw-vpc.id
+  cidr_block              = var.neediumtgw_priv_sub
+  map_public_ip_on_launch = true # automatically assign public IPs to instances
   availability_zone       = "us-east-2b"
 
   tags = {
@@ -128,8 +128,8 @@ resource "aws_route_table_association" "neediumtgw_pub_assoc" {
 # Associate the route table with the private subnet
 ######################################################
 resource "aws_route_table_association" "neediumtgw_priv_assoc" {
-  subnet_id      = aws_subnet.neediumtgw-priv-sub.id # Reference the second public subnet
-  route_table_id = aws_route_table.neediumtgw-rt-priv.id   # Attach the route table
+  subnet_id      = aws_subnet.neediumtgw-priv-sub.id     # Reference the second public subnet
+  route_table_id = aws_route_table.neediumtgw-rt-priv.id # Attach the route table
 }
 
 ####################################################
@@ -142,7 +142,7 @@ resource "aws_ec2_transit_gateway" "needium_tgw" {
   default_route_table_propagation = "enable"
   dns_support                     = "enable"
   #ecmp is to enable on-premises network on the tgw
-  vpn_ecmp_support                = "enable"
+  vpn_ecmp_support = "enable"
 
   tags = {
     Name = "needium-transitgw"
@@ -157,21 +157,18 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "needium-tgw-attach" {
   #count              = length(var.vpc_ids)
   transit_gateway_id = aws_ec2_transit_gateway.needium_tgw.id
   vpc_id             = aws_vpc.neediumtgw-vpc.id
-  #subnet_ids         = [var.subnet_ids[count.index]]
   subnet_ids = [
     aws_subnet.neediumtgw-priv-sub.id,
     aws_subnet.neediumtgw-pub-sub.id
-  ]  
+  ]
 }
 
 ####################################################
 # Create the Transit Gateway Routes in each VPCs route table
 ####################################################
 resource "aws_route" "needium_tgw_rt" {
-  #count                  = length(var.route_table_ids)
-  route_table_id         = aws_route_table.neediumtgw-rt-priv.id
-  #10.0.0.0/8
-  destination_cidr_block = "10.0.0.0/8"   #10.99.99.0/24
+  route_table_id = aws_route_table.neediumtgw-rt-priv.id
+  destination_cidr_block = "10.0.0.0/8" #10.99.99.0/24
   gateway_id             = aws_ec2_transit_gateway.needium_tgw.id
   depends_on = [
     aws_ec2_transit_gateway_vpc_attachment.needium-tgw-attach
@@ -236,7 +233,7 @@ resource "aws_route_table" "neediumtgw-rt-priv-A" {
 ##############################################################################################
 resource "aws_route" "neediumtgw_default_route-A" {
   route_table_id         = aws_route_table.neediumtgw-rt-pub-A.id # Reference the public route table
-  destination_cidr_block = "0.0.0.0/0"                      # Define the default route (all IPs allowed)
+  destination_cidr_block = "0.0.0.0/0"                            # Define the default route (all IPs allowed)
   gateway_id             = aws_internet_gateway.neediumtgw-igw-A.id
   # Use the Internet Gateway for outbound traffic
 }
@@ -245,9 +242,9 @@ resource "aws_route" "neediumtgw_default_route-A" {
 # Create the public subnet within the VPC
 #####################################################
 resource "aws_subnet" "neediumtgw-pub-A" {
-  vpc_id                  = aws_vpc.neediumtgw-vpc.id
-  cidr_block              = "10.99.97.0/25"
-  map_public_ip_on_launch = true          # automatically assign public IPs to instances
+  vpc_id = aws_vpc.neediumtgw-vpc.id
+  cidr_block              = var.neediumtgw_pub_A
+  map_public_ip_on_launch = true # automatically assign public IPs to instances
   availability_zone       = "us-east-2a"
 
   tags = {
@@ -259,9 +256,9 @@ resource "aws_subnet" "neediumtgw-pub-A" {
 # Create the private subnet within the VPC
 ###########################################
 resource "aws_subnet" "neediumtgw-priv-A" {
-  vpc_id                  = aws_vpc.neediumtgw-vpc-A.id
-  cidr_block              = "10.99.97.128/25"
-  map_public_ip_on_launch = true           # automatically assign public IPs to instances
+  vpc_id = aws_vpc.neediumtgw-vpc-A.id
+  cidr_block              = var.neediumtgw_priv_A
+  map_public_ip_on_launch = true # automatically assign public IPs to instances
   availability_zone       = "us-east-2b"
 
   tags = {
@@ -281,8 +278,8 @@ resource "aws_route_table_association" "neediumtgw_pub_assoc-A" {
 # Associate the route table with the private subnet
 ######################################################
 resource "aws_route_table_association" "neediumtgw_priv_assoc-A" {
-  subnet_id      = aws_subnet.neediumtgw-priv-A.id # Reference the second public subnet
-  route_table_id = aws_route_table.neediumtgw-rt-priv-A.id   # Attach the route table
+  subnet_id      = aws_subnet.neediumtgw-priv-A.id         # Reference the second public subnet
+  route_table_id = aws_route_table.neediumtgw-rt-priv-A.id # Attach the route table
 }
 
 ####################################################
@@ -290,21 +287,18 @@ resource "aws_route_table_association" "neediumtgw_priv_assoc-A" {
 ####################################################
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "needium-tgw-attach-A" {
-  #count              = length(var.vpc_ids)
   transit_gateway_id = aws_ec2_transit_gateway.needium_tgw.id
   vpc_id             = aws_vpc.neediumtgw-vpc-A.id
-  #subnet_ids         = [var.subnet_ids[count.index]]
   subnet_ids = [
     aws_subnet.neediumtgw-priv-A.id,
     aws_subnet.neediumtgw-pub-A.id
-  ]  
+  ]
 }
 
 ##############################################################
 # Create the Transit Gateway Routes in each VPCs route table A
 ##############################################################
 resource "aws_route" "needium_tgw_rt_A" {
-  #count                  = length(var.route_table_ids)
   route_table_id         = aws_route_table.neediumtgw-rt-priv-A.id
   destination_cidr_block = "10.0.0.0/8"
   gateway_id             = aws_ec2_transit_gateway.needium_tgw.id
@@ -369,7 +363,7 @@ resource "aws_route_table" "neediumtgw-rt-priv-B" {
 ##############################################################################################
 resource "aws_route" "neediumtgw_default_route-B" {
   route_table_id         = aws_route_table.neediumtgw-rt-pub-B.id # Reference the public route table
-  destination_cidr_block = "0.0.0.0/0"                      # Define the default route (all IPs allowed)
+  destination_cidr_block = "0.0.0.0/0"                            # Define the default route (all IPs allowed)
   gateway_id             = aws_internet_gateway.neediumtgw-igw-B.id
   # Use the Internet Gateway for outbound traffic
 }
@@ -378,9 +372,9 @@ resource "aws_route" "neediumtgw_default_route-B" {
 # Create the public subnet within the VPC
 #####################################################
 resource "aws_subnet" "neediumtgw-pub-B" {
-  vpc_id                  = aws_vpc.neediumtgw-vpc.id
-  cidr_block              = "10.99.98.0/25"
-  map_public_ip_on_launch = true          # automatically assign public IPs to instances
+  vpc_id = aws_vpc.neediumtgw-vpc.id
+  cidr_block              = var.neediumtgw_pub_B
+  map_public_ip_on_launch = true # automatically assign public IPs to instances
   availability_zone       = "us-east-2a"
 
   tags = {
@@ -392,9 +386,9 @@ resource "aws_subnet" "neediumtgw-pub-B" {
 # Create the private subnet within the VPC
 ###########################################
 resource "aws_subnet" "neediumtgw-priv-B" {
-  vpc_id                  = aws_vpc.neediumtgw-vpc-A.id
-  cidr_block              = "10.99.98.128/25"
-  map_public_ip_on_launch = true           # automatically assign public IPs to instances
+  vpc_id = aws_vpc.neediumtgw-vpc-A.id
+  cidr_block              = var.neediumtgw_priv_B
+  map_public_ip_on_launch = true # automatically assign public IPs to instances
   availability_zone       = "us-east-2b"
 
   tags = {
@@ -414,8 +408,8 @@ resource "aws_route_table_association" "neediumtgw_pub_assoc-B" {
 # Associate the route table with the private subnet
 ######################################################
 resource "aws_route_table_association" "neediumtgw_priv_assoc-B" {
-  subnet_id      = aws_subnet.neediumtgw-priv-A.id # Reference the second public subnet
-  route_table_id = aws_route_table.neediumtgw-rt-priv-B.id   # Attach the route table
+  subnet_id      = aws_subnet.neediumtgw-priv-A.id         # Reference the second public subnet
+  route_table_id = aws_route_table.neediumtgw-rt-priv-B.id # Attach the route table
 }
 
 ####################################################
@@ -423,14 +417,12 @@ resource "aws_route_table_association" "neediumtgw_priv_assoc-B" {
 ####################################################
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "needium-tgw-attach-B" {
-  #count              = length(var.vpc_ids)
   transit_gateway_id = aws_ec2_transit_gateway.needium_tgw.id
   vpc_id             = aws_vpc.neediumtgw-vpc-B.id
-  #subnet_ids         = [var.subnet_ids[count.index]]
   subnet_ids = [
     aws_subnet.neediumtgw-priv-B.id,
     aws_subnet.neediumtgw-pub-B.id
-  ]  
+  ]
 }
 
 ##############################################################
