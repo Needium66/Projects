@@ -36,7 +36,7 @@
 # Create a Virtual Private Cloud (VPC)
 ########################################
 resource "aws_vpc" "neediumtgw-vpc" {
-  cidr_block           = "10.1.0.0/16" # Define the IP address range for the VPC    10.99.99.0/24
+  cidr_block           = var.neediumtgw_vpc
   enable_dns_support   = true          # Enable DNS resolution within the VPC
   enable_dns_hostnames = true          # Allow instances to have public DNS hostnames
 
@@ -154,7 +154,6 @@ resource "aws_ec2_transit_gateway" "needium_tgw" {
 ####################################################
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "needium-tgw-attach" {
-  #count              = length(var.vpc_ids)
   transit_gateway_id = aws_ec2_transit_gateway.needium_tgw.id
   vpc_id             = aws_vpc.neediumtgw-vpc.id
   subnet_ids = [
@@ -168,7 +167,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "needium-tgw-attach" {
 ####################################################
 resource "aws_route" "needium_tgw_rt" {
   route_table_id = aws_route_table.neediumtgw-rt-priv.id
-  destination_cidr_block = "10.0.0.0/8" #10.99.99.0/24
+  destination_cidr_block = var.destination_cidr_block_tgw
   gateway_id             = aws_ec2_transit_gateway.needium_tgw.id
   depends_on = [
     aws_ec2_transit_gateway_vpc_attachment.needium-tgw-attach
@@ -186,7 +185,7 @@ resource "aws_route" "needium_tgw_rt" {
 # Create a Virtual Private Cloud (VPC) A
 ########################################
 resource "aws_vpc" "neediumtgw-vpc-A" {
-  cidr_block           = "10.2.0.0/16" # Define the IP address range for the VPC
+  cidr_block           = var.neediumtgw_vpc_A # Define the IP address range for the VPC
   enable_dns_support   = true          # Enable DNS resolution within the VPC
   enable_dns_hostnames = true          # Allow instances to have public DNS hostnames
 
@@ -300,7 +299,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "needium-tgw-attach-A" {
 ##############################################################
 resource "aws_route" "needium_tgw_rt_A" {
   route_table_id         = aws_route_table.neediumtgw-rt-priv-A.id
-  destination_cidr_block = "10.0.0.0/8"
+  destination_cidr_block = var.destination_cidr_block_tgw
   gateway_id             = aws_ec2_transit_gateway.needium_tgw.id
   depends_on = [
     aws_ec2_transit_gateway_vpc_attachment.needium-tgw-attach-A
@@ -316,7 +315,7 @@ resource "aws_route" "needium_tgw_rt_A" {
 # Create a Virtual Private Cloud (VPC) B
 ########################################
 resource "aws_vpc" "neediumtgw-vpc-B" {
-  cidr_block           = "10.3.0.0/16" # Define the IP address range for the VPC
+  cidr_block           = var.neediumtgw_vpc_B # Define the IP address range for the VPC
   enable_dns_support   = true          # Enable DNS resolution within the VPC
   enable_dns_hostnames = true          # Allow instances to have public DNS hostnames
 
@@ -431,7 +430,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "needium-tgw-attach-B" {
 resource "aws_route" "needium_tgw_rt_B" {
   #count                  = length(var.route_table_ids)
   route_table_id         = aws_route_table.neediumtgw-rt-priv-B.id
-  destination_cidr_block = "10.0.0.0/8"
+  destination_cidr_block = var.destination_cidr_block_tgw
   gateway_id             = aws_ec2_transit_gateway.needium_tgw.id
   depends_on = [
     aws_ec2_transit_gateway_vpc_attachment.needium-tgw-attach-B
