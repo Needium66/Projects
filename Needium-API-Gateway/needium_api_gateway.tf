@@ -7,7 +7,16 @@ each of the Microservices. Incorporate the following components below:
 -	Rate Limiting
 -	Scalability
 ###########################################################################################################################
-Architecture:
+#Architecture:
+#AWS API Gateway with REST API Implementation
+#User Authentification via Cognito ( TO DO: Use Fusion Auth in another deployment)
+#Incorprate Rate Limiting
+#Incorporate Path-based routing to route the appropraite call to appropriate service to get a Response
+#/payments path route to Payment Microservices(using AWS Lambda with ECS)
+#/telemedicine path routes to Telemedicine Microservice(AWS Lambda and ECS)
+#/pharmacy path routes to Pharmacy Services (AWS Lambda and ECS)
+#/phm path routes to Personal Health Management (AWS Lambda and ECS)
+#/users path routes to user management (Login, Sessions, Prompt)
 ###########################################################################################
 +-------------------+
 |      Client       |
