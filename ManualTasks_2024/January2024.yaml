@@ -16,8 +16,7 @@ In order to have a permanent soultion, a new drive was requested to be created.
 #After checking the drives, i noticed that there were other drives attached besides the c:drive. So i went to check the server
 2. Log in to the server
 3. Enter "Create" in the file browser
-4. Validate that all the respective discs are online and all
-ocated
+4. Validate that all the respective discs are online and allocated
 #Unfortunately, there were existing disks that were online but not allocated. They were attached to the instance in aws, but not created on the server
 5. Create the disks ( you need to know the label for the drives and whatever you want to call)
 6. Right click inside appropriate drive section

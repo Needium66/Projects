@@ -31,7 +31,7 @@ cp /etc/ssl/openssl.conf $filename.text
 some cert update commmands: you have got to run this in the directory where you have some cert files e.g key, etc
 #################################################################################################################
 run the below command to input your certificate name:
-"read -p "What is your PEM file namae without the extension (your cert name):"
+"read -p "What is your PEM file name without the extension (your cert name):"
 run the belwo command to input the password created for the password update:
 "Pass:$password"
 run the below command to create the ca file with its extension:
