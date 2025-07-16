@@ -44,8 +44,8 @@ resource "aws_lambda_function" "needium_auth_lambda" {
 
   environment {
     variables = {
-      FUSIONAUTH_DOMAIN = var.fusionauth_domain
-      FUSIONAUTH_API_KEY = var.fusionauth_api_key # Consider Secrets Manager for production
+      FUSIONAUTH_DOMAIN = var.needium_fusionauth_domain
+      FUSIONAUTH_API_KEY = var.needium_fusionauth_api_key # Consider Secrets Manager for production
     }
   }
 }
