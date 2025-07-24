@@ -29,7 +29,7 @@
 
 ##########################
 #Implementation Steps:
-#########################
+##########################
 Install Terraform: If you haven't already, install Terraform: https://developer.hashicorp.com/terraform/downloads
 
 Set up AWS CLI: Configure your AWS CLI with appropriate credentials and default region. Terraform will use these.
@@ -47,7 +47,6 @@ Note your FusionAuth domain (e.g., https://your-fusionauth.com) and the API Key.
 Prepare Lambda Code:
 
 Create the lambdas/ directory and its subdirectories as shown in the structure.
-
 Place the Python code and requirements.txt files into their respective directories.
 
 Run scripts/package_lambdas.sh to create the .zip files for your Lambda functions. You'll need pip installed.
