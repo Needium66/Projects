@@ -38,3 +38,23 @@
 #aws_cloudwatch_log_group: Sets up a log group for API Gateway access logs, providing visibility into API traffic.
 #output: Provides the invoke URL of deployed API Gateway, which frontend application will use to interact with the payment service
 #######################################################################################################################################
+#TO DO:
+#FusionAuth Configuration: Ensuring FusionAuth instance is properly configured to issue JWTs that can be validated by the 
+#FusionAuthCustomAuthorizer Lambda. Specifically, the audience in the Lambda code should match what FusionAuth issues for your API
+#
+#Error Handling and Monitoring: Enhance Lambda error handling and set up more comprehensive CloudWatch alarms
+#
+#SQS Consumer: Implemening a separate Lambda function (or other service) that consumes messages from the payment-processing-queue 
+#to perform the actual background payment processing (e.g., calling a payment gateway, updating status)
+#
+#DynamoDB Indexes: For efficient querying of payments by userId, perhaps adding a Global Secondary Index (GSI) on the userId attribute
+#in the DynamoDB table can be helpful
+#
+#Input Validation (API Gateway): While Lambda handles validation, API Gateway request validation schemas for stricter input control at
+#the edge can be added
+#
+#Rate Limiting and Throttling: Implement API Gateway usage plans and API keys for rate limiting and throttling to protect the backend services
+#
+#Regularly review IAM policies for least privilege, enable VPC for Lambdas if accessing private resources, and 
+#consider AWS WAF for additional protection
+######################################################################################################################################
