@@ -176,7 +176,8 @@ private_a, private_b subnets are for private resources.
 
 aws_internet_gateway provides internet access to the VPC.
 
-aws_nat_gateway in a public subnet allows resources in private subnets to initiate outbound connections (e.g., Lambda fetching dependencies, ECS pulling images).
+aws_nat_gateway in a public subnet allows resources in private subnets to initiate outbound connections
+(e.g., Lambda fetching dependencies, ECS pulling images).
 
 aws_route_table and aws_route_table_association manage network traffic routing.
 
@@ -231,7 +232,7 @@ Docker image.
 ECS Service (aws_ecs_service): Maintains the desired count of tasks, handles deployments, and integrates with the ALB.
 
 Application Load Balancer (aws_lb): Distributes incoming HTTP/HTTPS traffic across multiple targets (ECS tasks in this case).
- It's internet-facing in this example.
+It's internet-facing in this example.
 
 ALB Target Group (aws_lb_target_group): A logical grouping of targets (ECS tasks) that the ALB routes requests to.
  It also defines health checks.

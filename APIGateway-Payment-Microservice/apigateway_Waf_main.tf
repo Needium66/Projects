@@ -4,9 +4,9 @@
 # main.tf
 
 # Configure the AWS Provider
-provider "aws" {
-  region = "us-east-1" # Or your preferred AWS region
-}
+#provider "aws" {
+#  region = "us-east-2" # Or your preferred AWS region
+#}
 
 # -----------------------------------------------------------------------------
 # 1. IAM Roles and Policies
