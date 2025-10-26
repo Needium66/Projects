@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Serverless App Client</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Cognito SDK for browser-based auth -->
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.1/dist/amazon-cognito-identity.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-lg bg-white shadow-xl rounded-xl p-8 space-y-6">
+        <h1 class="text-3xl font-extrabold text-gray-900 text-center">Serverless Portal</h1>
+
+        <!-- Auth Form Container -->
+        <div id="auth-container" class="space-y-4">
+            <input type="email" id="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <input type="password" id="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+
+            <div class="flex space-x-4">
+                <button onclick="handleSignUp()" class="flex-1 py-3 px-4 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-150">Sign Up</button>
+                <button onclick="handleSignIn()" class="flex-1 py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150">Sign In</button>
+            </div>
+            <button onclick="showConfirmForm()" id="confirm-toggle" class="w-full text-center text-sm text-blue-500 hover:text-blue-700 transition duration-150">Confirm Account?</button>
+        </div>
+
+        <!-- Confirmation Form Container (Initially Hidden) -->
+        <div id="confirm-container" class="space-y-4 hidden border-t pt-4 border-gray-200">
+            <h2 class="text-xl font-bold text-gray-700">Confirm Account</h2>
+            <input type="text" id="confirmation-code" placeholder="Confirmation Code" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+            <button onclick="handleConfirm()" class="w-full py-3 px-4 bg-yellow-600 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-700 transition duration-150">Confirm</button>
+        </div>
+
+        <!-- Secure Area (Initially Hidden) -->
+        <div id="secure-area" class="space-y-4 hidden border-t pt-4 border-gray-200">
+            <h2 class="text-xl font-bold text-gray-700">Secured Content</h2>
+            <button onclick="callSecureApi()" class="w-full py-3 px-4 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition duration-150">
+                Call Secure API (Port 443 Only)
+            </button>
+            <button onclick="handleSignOut()" class="w-full py-2 px-4 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition duration-150">Sign Out</button>
+        </div>
+
+        <!-- Status Message Box -->
+        <div id="status-message" class="mt-4 p-3 rounded-lg text-sm text-center" role="alert"></div>
+        <pre id="api-response" class="hidden mt-4 p-4 bg-gray-100 rounded-lg text-xs overflow-auto max-h-40"></pre>
+    </div>
+
+    <script>
+        // --- CONFIGURATION (PLACEHOLDERS) ---
+        // These values are required from your AWS CloudFormation/Terraform deployment
+        const POOL_DATA = {
+            UserPoolId: 'us-east-1_XXXXX', // Replace with your Cognito User Pool ID
+            ClientId: '7p53jgs3k5h4d2p0u4e9z1x0' // Replace with your Cognito App Client ID
+        };
+        const API_GATEWAY_URL = 'https://abcdefghij.execute-api.us-east-1.amazonaws.com/prod/secure-data'; // Replace with your API Gateway HTTPS URL
+
+        // --- Cognito Setup ---
+        const userPool = new AmazonCognitoIdentity.CognitoUserPool(POOL_DATA);
+        let cognitoUser = null;
+
+        // Utility to display messages
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = `mt-4 p-3 rounded-lg text-sm text-center ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+        }
+
+        function showSecureArea(loggedIn) {
+            const authContainer = document.getElementById('auth-container');
+            const confirmContainer = document.getElementById('confirm-container');
+            const secureArea = document.getElementById('secure-area');
+
+            if (loggedIn) {
+                authContainer.classList.add('hidden');
+                confirmContainer.classList.add('hidden');
+                secureArea.classList.remove('hidden');
+                showStatus('Successfully logged in!', false);
+            } else {
+                authContainer.classList.remove('hidden');
+                confirmContainer.classList.add('hidden');
+                secureArea.classList.add('hidden');
+            }
+        }
+
+        function showConfirmForm() {
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('confirm-container').classList.remove('hidden');
+        }
+
+        // --- Handlers ---
+
+        function getCredentials() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            return { email, password };
+        }
+
+        async function handleSignUp() {
+            const { email, password } = getCredentials();
+            if (!email || !password) return showStatus('Please enter email and password.', true);
+
+            userPool.signUp(email, password, null, null, (err, result) => {
+                if (err) {
+                    console.error('Sign Up Error:', err);
+                    return showStatus(err.message || JSON.stringify(err), true);
+                }
+                cognitoUser = result.user;
+                showStatus('Sign up successful! Check your email for a confirmation code.');
+                showConfirmForm();
+            });
+        }
+
+        function handleConfirm() {
+            const { email } = getCredentials();
+            const code = document.getElementById('confirmation-code').value;
+
+            if (!email || !code) return showStatus('Please enter email and confirmation code.', true);
+
+            const userData = { Username: email, Pool: userPool };
+            cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+            cognitoUser.confirmRegistration(code, true, (err, result) => {
+                if (err) {
+                    console.error('Confirmation Error:', err);
+                    return showStatus(err.message || JSON.stringify(err), true);
+                }
+                showStatus('Account confirmed successfully. Please sign in.');
+                showSecureArea(false); // Go back to sign-in screen
+            });
+        }
+
+        function handleSignIn() {
+            const { email, password } = getCredentials();
+            if (!email || !password) return showStatus('Please enter email and password.', true);
+
+            const authenticationData = { Username: email, Password: password };
+            const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+
+            const userData = { Username: email, Pool: userPool };
+            cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+            cognitoUser.authenticateUser(authenticationDetails, {
+                onSuccess: function(result) {
+                    // We successfully got the JWT
+                    showSecureArea(true);
+                },
+                onFailure: function(err) {
+                    console.error('Sign In Error:', err);
+                    showStatus(err.message || JSON.stringify(err), true);
+                },
+                newPasswordRequired: function(userAttributes, requiredAttributes) {
+                    // This scenario requires a specific UI flow and is omitted for basic auth example.
+                    showStatus("New password required. Please implement new password flow.", true);
+                }
+            });
+        }
+
+        function handleSignOut() {
+            if (cognitoUser) {
+                cognitoUser.signOut();
+                cognitoUser = null;
+                showSecureArea(false);
+                showStatus('Signed out successfully.', false);
+                document.getElementById('api-response').classList.add('hidden');
+            }
+        }
+
+        function callSecureApi() {
+            document.getElementById('api-response').classList.remove('hidden');
+            document.getElementById('api-response').textContent = 'Loading...';
+
+            // Get the ID Token (the JWT used for authorization)
+            cognitoUser.getSession((err, session) => {
+                if (err) {
+                    handleSignOut(); // Force sign out if session is invalid
+                    return showStatus('Session expired. Please sign in again.', true);
+                }
+
+                const idToken = session.getIdToken().getJwtToken();
+
+                fetch(API_GATEWAY_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // API Gateway + Cognito Authorizer expects the JWT in the Authorization header
+                        'Authorization': idToken,
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    showStatus('API Call Successful (Port 443)', false);
+                    document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    console.error('API Call Error:', error);
+                    showStatus(`API Call Failed: ${error.message}. Check browser console for details.`, true);
+                    document.getElementById('api-response').textContent = `ERROR: ${error.message}`;
+                });
+            });
+        }
+
+        // Check if a user is already authenticated on load
+        window.onload = function() {
+            const currentUser = userPool.getCurrentUser();
+            if (currentUser != null) {
+                cognitoUser = currentUser;
+                currentUser.getSession((err, session) => {
+                    if (session && session.isValid()) {
+                        showSecureArea(true);
+                    } else {
+                        showSecureArea(false);
+                        showStatus('Please sign in.', true);
+                    }
+                });
+            } else {
+                 showStatus('Welcome! Please sign up or sign in.', false);
+            }
+        };
+
+    </script>
+</body>
+</html>
