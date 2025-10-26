@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serverless Laundry Management</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Cognito SDK for browser-based auth -->
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.1/dist/amazon-cognito-identity.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #e5e7eb; }
+        .card { transition: transform 0.2s, box-shadow 0.2s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6">
+
+    <div id="app" class="w-full max-w-4xl bg-white shadow-2xl rounded-xl p-10 space-y-8">
+        <h1 class="text-4xl font-extrabold text-indigo-700 text-center border-b pb-4">🧺 Secure Laundry Manager</h1>
+
+        <!-- Status Message Box -->
+        <div id="status-message" class="mt-4 p-3 rounded-lg text-sm text-center font-medium" role="alert"></div>
+
+        <!-- AUTH VIEW -->
+        <div id="auth-view" class="space-y-6 max-w-md mx-auto">
+            <h2 class="text-2xl font-semibold text-gray-800 text-center">Sign In / Sign Up</h2>
+            <input type="email" id="email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <input type="password" id="password" placeholder="Password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="flex space-x-4">
+                <button onclick="handleSignUp()" class="flex-1 py-3 px-4 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition duration-150">Sign Up</button>
+                <button onclick="handleSignIn()" class="flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition duration-150">Sign In</button>
+            </div>
+
+            <div id="confirm-container" class="space-y-4 hidden pt-4">
+                <input type="text" id="confirmation-code" placeholder="Confirmation Code" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                <button onclick="handleConfirm()" class="w-full py-3 px-4 bg-yellow-600 text-white font-bold rounded-xl shadow-lg hover:bg-yellow-700 transition duration-150">Confirm Account</button>
+            </div>
+        </div>
+
+        <!-- SECURE APP VIEW -->
+        <div id="secure-app-view" class="hidden">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <span id="user-display" class="text-lg font-medium text-gray-700"></span>
+                <button onclick="handleSignOut()" class="py-2 px-4 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition duration-150">Sign Out</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- 1. CREATE ORDER CARD -->
+                <div class="card bg-gray-50 p-6 rounded-xl shadow-lg lg:col-span-1 space-y-4">
+                    <h3 class="text-xl font-bold text-indigo-700">Create New Order</h3>
+                    <select id="laundry-type" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <option value="wash_fold">Wash & Fold</option>
+                        <option value="dry_clean">Dry Cleaning</option>
+                        <option value="ironing">Ironing Only</option>
+                    </select>
+                    <input type="number" id="laundry-weight" placeholder="Weight (kg)" min="1" class="w-full p-3 border border-gray-300 rounded-lg">
+                    <input type="text" id="pickup-address" placeholder="Pickup Address" class="w-full p-3 border border-gray-300 rounded-lg">
+                    <button onclick="createOrder()" class="w-full py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition duration-150">Submit Order</button>
+                </div>
+
+                <!-- 2. VIEW ORDERS CARD -->
+                <div class="card bg-gray-50 p-6 rounded-xl shadow-lg lg:col-span-2 space-y-4">
+                    <h3 class="text-xl font-bold text-indigo-700 flex justify-between items-center">
+                        Your Active Orders
+                        <button onclick="viewOrders()" class="text-sm text-gray-500 hover:text-indigo-600">Refresh <svg class="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m5.656-7h6.642a4 4 0 014 4v5.642m-5.656-7A8.001 8.001 0 0019.418 15m-15.356-2A8.001 8.001 0 0119.418 9m-1.06 6.94A8.001 8.001 0 004.582 15m5.656-7h6.642a4 4 0 014 4v5.642"></path></svg></button>
+                    </h3>
+                    <div id="orders-list" class="space-y-3 max-h-80 overflow-y-auto">
+                        <p class="text-gray-500 italic">No orders loaded. Click refresh or create a new order.</p>
+                    </div>
+                </div>
+
+                <!-- 3. PAYMENT CHECK CARD (Full Width on Small Screens) -->
+                <div class="card bg-gray-50 p-6 rounded-xl shadow-lg lg:col-span-3 space-y-4 border-t pt-6">
+                    <h3 class="text-xl font-bold text-indigo-700">Payment Status Check</h3>
+                    <div class="flex space-x-4">
+                        <input type="text" id="order-id-payment" placeholder="Enter Order ID" class="flex-grow p-3 border border-gray-300 rounded-lg">
+                        <button onclick="checkPaymentStatus()" class="py-3 px-6 bg-purple-600 text-white font-bold rounded-xl shadow-md hover:bg-purple-700 transition duration-150 whitespace-nowrap">Check Payment</button>
+                    </div>
+                    <div id="payment-result" class="mt-3 p-3 bg-white border border-gray-200 rounded-lg hidden"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION (PLACEHOLDERS) ---
+        const POOL_DATA = {
+            UserPoolId: 'us-east-1_ALBXXXX', // Replace with your Cognito User Pool ID
+            ClientId: '2q0d8a7c6b5e4f3g2h1j0k9l' // Replace with your Cognito App Client ID
+        };
+        // *** IMPORTANT: This must be the HTTPS domain of your ALB, e.g., 'https://api.laundryapp.com' ***
+        const ALB_API_ENDPOINT = 'https://alb.laundryapp.com/api';
+
+        // --- Cognito Setup ---
+        const userPool = new AmazonCognitoIdentity.CognitoUserPool(POOL_DATA);
+        let cognitoUser = null;
+        let idToken = null;
+
+        // --- Utility Functions ---
+
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = `mt-4 p-3 rounded-lg text-sm text-center font-medium ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+        }
+
+        function toggleAppView(loggedIn, email) {
+            document.getElementById('auth-view').classList.toggle('hidden', loggedIn);
+            document.getElementById('secure-app-view').classList.toggle('hidden', !loggedIn);
+            if (loggedIn) {
+                document.getElementById('user-display').textContent = `Welcome, ${email}`;
+                viewOrders(); // Auto-load orders on successful login
+            } else {
+                document.getElementById('status-message').className = 'hidden';
+            }
+        }
+
+        function getCredentials() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            return { email, password };
+        }
+
+        // --- Authentication Handlers ---
+
+        function handleSignUp() {
+            const { email, password } = getCredentials();
+            if (!email || !password) return showStatus('Please enter valid email and password.', true);
+
+            userPool.signUp(email, password, null, null, (err, result) => {
+                if (err) return showStatus(err.message || JSON.stringify(err), true);
+                cognitoUser = result.user;
+                showStatus('Sign up successful! Check your email for a confirmation code.');
+                document.getElementById('confirm-container').classList.remove('hidden');
+            });
+        }
+
+        function handleConfirm() {
+            const { email } = getCredentials();
+            const code = document.getElementById('confirmation-code').value.trim();
+
+            if (!email || !code) return showStatus('Please enter email and confirmation code.', true);
+
+            const userData = { Username: email, Pool: userPool };
+            cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+            cognitoUser.confirmRegistration(code, true, (err) => {
+                if (err) return showStatus(err.message || JSON.stringify(err), true);
+                showStatus('Account confirmed successfully. Please sign in.', false);
+                document.getElementById('confirm-container').classList.add('hidden');
+            });
+        }
+
+        function handleSignIn() {
+            const { email, password } = getCredentials();
+            if (!email || !password) return showStatus('Please enter email and password.', true);
+
+            const authenticationData = { Username: email, Password: password };
+            const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+
+            const userData = { Username: email, Pool: userPool };
+            cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+            cognitoUser.authenticateUser(authenticationDetails, {
+                onSuccess: function(result) {
+                    idToken = result.getIdToken().getJwtToken();
+                    toggleAppView(true, email);
+                    showStatus('Welcome back! Your session is secure via HTTPS (Port 443).', false);
+                },
+                onFailure: function(err) {
+                    showStatus(err.message || JSON.stringify(err), true);
+                }
+            });
+        }
+
+        function handleSignOut() {
+            if (cognitoUser) {
+                cognitoUser.signOut();
+                cognitoUser = null;
+                idToken = null;
+                toggleAppView(false, '');
+                showStatus('Signed out successfully.', false);
+            }
+        }
+
+        // --- API CALLER UTILITY (Centralized Fetch Logic) ---
+
+        async function secureApiCall(method, path, body = null) {
+            if (!idToken) {
+                handleSignOut();
+                throw new Error("Authentication token missing. Please sign in.");
+            }
+
+            const fetchOptions = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    // The JWT is passed to the ALB, which routes it to Lambda.
+                    // The Lambda function will be responsible for validating this token.
+                    'Authorization': idToken,
+                },
+            };
+
+            if (body) {
+                fetchOptions.body = JSON.stringify(body);
+            }
+
+            const url = `${ALB_API_ENDPOINT}${path}`;
+
+            try {
+                const response = await fetch(url, fetchOptions);
+
+                if (response.status === 401) {
+                    handleSignOut();
+                    throw new Error("Session invalid/expired. Please sign in.");
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`API Error ${response.status}: ${errorData}`);
+                }
+                // Handle 204 No Content
+                if (response.status === 204) {
+                    return null;
+                }
+                return await response.json();
+
+            } catch (error) {
+                console.error('API Call Failed:', error);
+                throw error;
+            }
+        }
+
+        // --- Laundry App Logic ---
+
+        async function createOrder() {
+            const type = document.getElementById('laundry-type').value;
+            const weight = document.getElementById('laundry-weight').value;
+            const address = document.getElementById('pickup-address').value.trim();
+
+            if (!weight || !address) return showStatus('Please fill in weight and address.', true);
+
+            const orderDetails = {
+                type: type,
+                weight: parseFloat(weight),
+                address: address,
+                status: 'Pending Pickup',
+            };
+
+            try {
+                showStatus('Creating order...', false);
+                // MOCK API response for POST /orders
+                const mockResponse = {
+                    orderId: 'ORD-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+                    ...orderDetails
+                };
+                
+                // Replace with:
+                // const apiResponse = await secureApiCall('POST', '/orders', orderDetails);
+
+                // --- START MOCK API CALL ---
+                await new Promise(resolve => setTimeout(resolve, 800)); // Simulate latency
+                const apiResponse = mockResponse;
+                // --- END MOCK API CALL ---
+
+                showStatus(`Order created successfully! ID: ${apiResponse.orderId}`, false);
+                document.getElementById('laundry-weight').value = '';
+                document.getElementById('pickup-address').value = '';
+                viewOrders(); // Refresh the list
+            } catch (error) {
+                showStatus(`Failed to create order: ${error.message}`, true);
+            }
+        }
+
+        async function viewOrders() {
+            const listContainer = document.getElementById('orders-list');
+            listContainer.innerHTML = '<p class="text-indigo-500 italic">Loading orders...</p>';
+
+            try {
+                // MOCK API response for GET /orders
+                const mockOrders = [
+                    { id: 'ORD-A1B2C', type: 'Wash & Fold', weight: 5, status: 'In Progress', payment: 'Paid', date: '2025-10-25' },
+                    { id: 'ORD-D3E4F', type: 'Dry Cleaning', weight: 1, status: 'Ready for Delivery', payment: 'Unpaid', date: '2025-10-24' },
+                    { id: 'ORD-G5H6I', type: 'Ironing Only', weight: 2, status: 'Completed', payment: 'Paid', date: '2025-10-22' },
+                ];
+
+                // Replace with:
+                // const apiResponse = await secureApiCall('GET', '/orders');
+
+                // --- START MOCK API CALL ---
+                await new Promise(resolve => setTimeout(resolve, 800)); // Simulate latency
+                const apiResponse = mockOrders;
+                // --- END MOCK API CALL ---
+
+                if (!apiResponse || apiResponse.length === 0) {
+                    listContainer.innerHTML = '<p class="text-gray-500 italic">No active orders found.</p>';
+                    return;
+                }
+
+                listContainer.innerHTML = apiResponse.map(order => `
+                    <div class="p-3 bg-white border border-gray-200 rounded-lg flex justify-between items-center shadow-sm">
+                        <div>
+                            <p class="font-semibold text-gray-800">${order.type} (${order.weight}kg)</p>
+                            <p class="text-xs text-gray-500">ID: ${order.id} | Date: ${order.date}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full ${order.status.includes('Progress') ? 'bg-blue-100 text-blue-800' : order.status.includes('Ready') ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                ${order.status}
+                            </span>
+                            <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full ml-2 ${order.payment === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${order.payment}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                listContainer.innerHTML = `<p class="text-red-500 italic">Error loading orders: ${error.message}</p>`;
+                if (error.message.includes('Session invalid')) handleSignOut();
+            }
+        }
+
+        async function checkPaymentStatus() {
+            const orderId = document.getElementById('order-id-payment').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('payment-result');
+            resultDiv.classList.add('hidden');
+            resultDiv.innerHTML = '';
+            
+            if (!orderId) return showStatus('Please enter an Order ID.', true);
+
+            try {
+                showStatus(`Checking payment status for ${orderId}...`, false);
+                
+                // MOCK API response for GET /payments/{orderId}
+                const mockPaymentStatus = {
+                    'ORD-A1B2C': { status: 'Paid', amount: 35.50, method: 'Credit Card' },
+                    'ORD-D3E4F': { status: 'Unpaid', amount: 20.00, due: '2025-10-30' },
+                }[orderId] || null;
+
+                // Replace with:
+                // const apiResponse = await secureApiCall('GET', `/payments/${orderId}`);
+
+                // --- START MOCK API CALL ---
+                await new Promise(resolve => setTimeout(resolve, 800)); // Simulate latency
+                const apiResponse = mockPaymentStatus;
+                // --- END MOCK API CALL ---
+
+                if (!apiResponse) {
+                    resultDiv.innerHTML = `<p class="text-red-700 font-semibold">Order ID ${orderId} not found.</p>`;
+                    resultDiv.classList.remove('hidden');
+                    return showStatus('Payment check failed.', true);
+                }
+
+                resultDiv.classList.remove('hidden');
+                resultDiv.className = `mt-3 p-3 rounded-lg border-2 ${apiResponse.status === 'Paid' ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`;
+                
+                if (apiResponse.status === 'Paid') {
+                    resultDiv.innerHTML = `
+                        <p class="font-bold text-green-800">✅ PAYMENT STATUS: PAID</p>
+                        <p class="text-sm text-gray-700">Amount: $${apiResponse.amount.toFixed(2)} | Method: ${apiResponse.method}</p>
+                    `;
+                    showStatus(`Payment for ${orderId} is Paid.`, false);
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="font-bold text-red-800">❌ PAYMENT STATUS: UNPAID</p>
+                        <p class="text-sm text-gray-700">Amount Due: $${apiResponse.amount.toFixed(2)} | Due Date: ${apiResponse.due}</p>
+                    `;
+                    showStatus(`Payment for ${orderId} is Unpaid.`, true);
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-red-700 font-semibold">Error: ${error.message}</p>`;
+                resultDiv.classList.remove('hidden');
+            }
+        }
+
+        // --- Initialization ---
+
+        window.onload = function() {
+            const currentUser = userPool.getCurrentUser();
+            if (currentUser != null) {
+                cognitoUser = currentUser;
+                currentUser.getSession((err, session) => {
+                    if (session && session.isValid()) {
+                        idToken = session.getIdToken().getJwtToken();
+                        toggleAppView(true, cognitoUser.username);
+                        showStatus('Session restored. Ready to manage laundry orders.', false);
+                    } else {
+                        // User exists locally but session is expired
+                        showStatus('Please sign in to restore your session.', true);
+                        toggleAppView(false, '');
+                    }
+                });
+            } else {
+                 showStatus('Welcome to the Laundry Manager! Please sign up or sign in.', false);
+                 toggleAppView(false, '');
+            }
+        };
+
+    </script>
+</body>
+</html>
